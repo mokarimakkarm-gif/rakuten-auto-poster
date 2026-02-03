@@ -2,6 +2,7 @@
 """
 楽天ROOM投稿完全自動化スクリプト v2
 GitHub Actions対応版
+毎日5件投稿（異なるカテゴリから選定）
 """
 
 import json
@@ -85,12 +86,14 @@ class RakutenAutoPoster:
             json.dump(self.history, f, ensure_ascii=False, indent=2)
     
     def get_next_category(self) -> Dict:
+        """次のカテゴリを取得（ローテーション）"""
         current_index = self.history["last_category_index"]
         next_index = (current_index + 1) % len(CATEGORIES)
         self.history["last_category_index"] = next_index
         return CATEGORIES[next_index]
     
     def generate_product(self, category: Dict) -> Dict:
+        """商品データを生成"""
         return {
             "name": f"{category['name']}の人気商品",
             "category": category['name'],
@@ -102,6 +105,7 @@ class RakutenAutoPoster:
         }
     
     def generate_review(self, product: Dict) -> str:
+        """レビュー文を生成"""
         template = random.choice(REVIEW_TEMPLATES)
         features = ", ".join(random.sample(product.get("features", FEATURES), 
                                            min(2, len(product.get("features", FEATURES)))))
@@ -109,30 +113,27 @@ class RakutenAutoPoster:
         review = template.format(feature=features, benefit=benefit)
         return review[:500]
     
-    def run(self) -> bool:
-        logger.info("=" * 70)
-        logger.info("🎯 楽天ROOM投稿完全自動化エンジン (GitHub Actions)")
-        logger.info(f"⏰ 実行時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        logger.info("=" * 70)
-        
+    def post_single(self, post_number: int) -> bool:
+        """1件投稿を実行"""
         try:
             # カテゴリを取得
             category = self.get_next_category()
-            logger.info(f"📂 カテゴリ: {category['name']}")
+            logger.info(f"[投稿{post_number}/5] カテゴリ: {category['name']}")
             
             # 商品を生成
             product = self.generate_product(category)
-            logger.info(f"📦 商品: {product['name']}")
+            logger.info(f"   商品: {product['name']}")
             logger.info(f"   評価: ★{product['rating']} ({product['reviews']}件)")
             logger.info(f"   価格: {product['price']}")
             
             # レビュー文を生成
             review = self.generate_review(product)
-            logger.info(f"✍️ レビュー文を生成: {len(review)}文字")
+            logger.info(f"   レビュー: {len(review)}文字")
             
             # 投稿データを作成
             button = random.choice(POST_BUTTONS)
             post_data = {
+                "post_number": post_number,
                 "product_name": product['name'],
                 "category": product['category'],
                 "rating": product['rating'],
@@ -146,28 +147,47 @@ class RakutenAutoPoster:
             }
             
             # 投稿データを保存
-            post_file = self.data_dir / f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            post_file = self.data_dir / f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}_#{post_number}.json"
             with open(post_file, 'w', encoding='utf-8') as f:
                 json.dump(post_data, f, ensure_ascii=False, indent=2)
             
-            logger.info(f"🚀 投稿完了: {button}")
-            logger.info(f"   保存先: {post_file}")
+            logger.info(f"   ボタン: {button}")
+            logger.info(f"   ✓ 投稿完了\n")
             
-            # 履歴を更新
+            # 履歴に追加
             self.history["posts"].append(post_data)
-            self.history["total_posts"] = len(self.history["posts"])
-            self.save_history()
-            
-            logger.info("\n" + "=" * 70)
-            logger.info("✨ 自動投稿が完了しました!")
-            logger.info(f"   総投稿数: {self.history['total_posts']}")
-            logger.info("=" * 70 + "\n")
             
             return True
         
         except Exception as e:
-            logger.error(f"❌ エラーが発生しました: {str(e)}", exc_info=True)
+            logger.error(f"[投稿{post_number}/5] エラー: {str(e)}", exc_info=True)
             return False
+    
+    def run(self) -> bool:
+        """5件投稿を実行"""
+        logger.info("=" * 70)
+        logger.info("🎯 楽天ROOM投稿完全自動化エンジン (5件投稿版)")
+        logger.info(f"⏰ 実行時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S (JST)')}")
+        logger.info("=" * 70 + "\n")
+        
+        success_count = 0
+        
+        # 5件投稿を実行
+        for i in range(1, 6):
+            if self.post_single(i):
+                success_count += 1
+        
+        # 履歴を更新
+        self.history["total_posts"] = len(self.history["posts"])
+        self.save_history()
+        
+        logger.info("=" * 70)
+        logger.info(f"✨ 本日の投稿が完了しました!")
+        logger.info(f"   成功: {success_count}/5件")
+        logger.info(f"   総投稿数: {self.history['total_posts']}")
+        logger.info("=" * 70 + "\n")
+        
+        return success_count == 5
 
 if __name__ == "__main__":
     poster = RakutenAutoPoster()

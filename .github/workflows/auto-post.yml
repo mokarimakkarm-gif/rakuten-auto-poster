@@ -2,8 +2,8 @@ name: 楽天ROOM自動投稿
 
 on:
   schedule:
-    # 毎日9時(UTC 0時)に実行
-    - cron: '0 0 * * *'
+    # 毎日日本時間12時(UTC 3時)に実行
+    - cron: '0 3 * * *'
   workflow_dispatch:  # 手動実行も可能
 
 jobs:
