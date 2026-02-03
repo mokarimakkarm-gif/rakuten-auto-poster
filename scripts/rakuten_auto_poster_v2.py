@@ -118,7 +118,7 @@ class RakutenAutoPoster:
         try:
             # カテゴリを取得
             category = self.get_next_category()
-            logger.info(f"[投稿{post_number}/5] カテゴリ: {category['name']}")
+            logger.info(f"[投稿{post_number}/10] カテゴリ: {category['name']}")
             
             # 商品を生成
             product = self.generate_product(category)
@@ -160,20 +160,20 @@ class RakutenAutoPoster:
             return True
         
         except Exception as e:
-            logger.error(f"[投稿{post_number}/5] エラー: {str(e)}", exc_info=True)
+            logger.error(f"[投稿{post_number}/10] エラー: {str(e)}", exc_info=True)
             return False
     
     def run(self) -> bool:
-        """5件投稿を実行"""
+        """10件投稿を実行"""
         logger.info("=" * 70)
-        logger.info("🎯 楽天ROOM投稿完全自動化エンジン (5件投稿版)")
+        logger.info("🎯 楽天ROOM投稿完全自動化エンジン (10件投稿版)")
         logger.info(f"⏰ 実行時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S (JST)')}")
         logger.info("=" * 70 + "\n")
         
         success_count = 0
         
-        # 5件投稿を実行
-        for i in range(1, 6):
+        # 10件投稿を実行
+        for i in range(1, 11):
             if self.post_single(i):
                 success_count += 1
         
@@ -183,11 +183,11 @@ class RakutenAutoPoster:
         
         logger.info("=" * 70)
         logger.info(f"✨ 本日の投稿が完了しました!")
-        logger.info(f"   成功: {success_count}/5件")
+        logger.info(f"   成功: {success_count}/10件")
         logger.info(f"   総投稿数: {self.history['total_posts']}")
         logger.info("=" * 70 + "\n")
         
-        return success_count == 5
+        return success_count == 10
 
 if __name__ == "__main__":
     poster = RakutenAutoPoster()
