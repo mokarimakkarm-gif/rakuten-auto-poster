@@ -31,7 +31,7 @@ jobs:
       
       - name: 自動投稿スクリプトを実行
         run: |
-          python scripts/rakuten_auto_poster_v2.py
+          python scripts/rakuten_auto_poster_v3.py
         env:
           DATA_DIR: ./data
       
