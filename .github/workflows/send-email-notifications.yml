@@ -1,0 +1,84 @@
+name: メール通知送信
+
+on:
+  workflow_run:
+    workflows:
+      - "楽天ROOM自動投稿"
+      - "楽天市場API変更検出"
+    types:
+      - completed
+
+jobs:
+  notify-email:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Pythonをセットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: メール通知スクリプトをインストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-dotenv
+      
+      - name: 投稿完了通知を送信
+        if: github.event.workflow_run.name == '楽天ROOM自動投稿' && github.event.workflow_run.conclusion == 'success'
+        uses: davismatejcs/gmail-action@v1
+        with:
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          subject: '✅ 楽天ROOM投稿完了 - ${{ github.event.workflow_run.created_at }}'
+          body: |
+            本日の楽天ROOM投稿が完了しました。
+            
+            実行時刻: ${{ github.event.workflow_run.created_at }}
+            ワークフロー: ${{ github.event.workflow_run.name }}
+            ステータス: 成功 ✅
+            
+            詳細: https://github.com/mokarimakkarm-gif/rakuten-auto-poster/actions/runs/${{ github.event.workflow_run.id }}
+          client_id: ${{ secrets.GMAIL_CLIENT_ID }}
+          client_secret: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      
+      - name: 投稿失敗通知を送信
+        if: github.event.workflow_run.name == '楽天ROOM自動投稿' && github.event.workflow_run.conclusion == 'failure'
+        uses: davismatejcs/gmail-action@v1
+        with:
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          subject: '❌ 楽天ROOM投稿失敗 - ${{ github.event.workflow_run.created_at }}'
+          body: |
+            本日の楽天ROOM投稿に失敗しました。
+            
+            実行時刻: ${{ github.event.workflow_run.created_at }}
+            ワークフロー: ${{ github.event.workflow_run.name }}
+            ステータス: 失敗 ❌
+            
+            詳細: https://github.com/mokarimakkarm-gif/rakuten-auto-poster/actions/runs/${{ github.event.workflow_run.id }}
+            
+            ログを確認して対応してください。
+          client_id: ${{ secrets.GMAIL_CLIENT_ID }}
+          client_secret: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      
+      - name: API変更検出通知を送信
+        if: github.event.workflow_run.name == '楽天市場API変更検出' && github.event.workflow_run.conclusion == 'failure'
+        uses: davismatejcs/gmail-action@v1
+        with:
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          subject: '🚨 楽天市場API変更検出アラート'
+          body: |
+            楽天市場のページ構造が変更されました。
+            
+            検出時刻: ${{ github.event.workflow_run.created_at }}
+            ワークフロー: ${{ github.event.workflow_run.name }}
+            
+            スクリプトの確認と修正が必要です。
+            
+            詳細: https://github.com/mokarimakkarm-gif/rakuten-auto-poster/actions/runs/${{ github.event.workflow_run.id }}
+          client_id: ${{ secrets.GMAIL_CLIENT_ID }}
+          client_secret: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.GMAIL_REFRESH_TOKEN }}
