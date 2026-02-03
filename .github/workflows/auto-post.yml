@@ -1,0 +1,61 @@
+name: 楽天ROOM自動投稿
+
+on:
+  schedule:
+    # 毎日9時(UTC 0時)に実行
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Pythonをセットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 依存パッケージをインストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install beautifulsoup4 requests
+      
+      - name: 投稿データディレクトリを作成
+        run: |
+          mkdir -p data/posts
+          mkdir -p data/logs
+      
+      - name: 自動投稿スクリプトを実行
+        run: |
+          python scripts/rakuten_auto_poster_v2.py
+        env:
+          DATA_DIR: ./data
+      
+      - name: 投稿ログをアップロード
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: posting-logs
+          path: data/logs/
+          retention-days: 30
+      
+      - name: 投稿データをGitにコミット
+        if: success()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git commit -m "自動投稿: $(date '+%Y-%m-%d %H:%M:%S')" || true
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 失敗時の通知
+        if: failure()
+        run: |
+          echo "投稿に失敗しました"
+          echo "詳細はログを確認してください"
